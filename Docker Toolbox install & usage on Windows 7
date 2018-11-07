@@ -1,0 +1,37 @@
+Installation 
+https://docs.docker.com/toolbox/toolbox_install_windows/#looking-for-troubleshooting-help
+  Follow the instructions, check 'Oracle VM VirtualBox' during install
+
+Usage 
+https://docs.docker.com/get-started/#prepare-your-docker-environment
+  OPen Docker QuickStart Terminal, type commands there. 
+  Docker commands     
+    ## List Docker CLI commands
+    docker
+    docker container --help
+
+    ## Display Docker version and info
+    docker --version
+    docker version
+    docker info
+
+    ## Execute Docker image
+    docker run hello-world
+
+    ## List Docker images
+    docker image ls
+
+    ## List Docker containers (running, all, all in quiet mode)
+    docker container ls
+    docker container ls --all
+    docker container ls -aq
+   
+O-CNN docker setup
+    cd docker
+    docker build -t ocnn .
+    docker run --name ocnn -it ocnn /bin/bash
+
+Bash cheatsheet
+URL:  https://github.com/LeCoupa/awesome-cheatsheets.git
+path: awesome-cheatsheets/languages/bash.sh
+      
