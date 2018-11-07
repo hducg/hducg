@@ -1,5 +1,6 @@
 Installation 
 https://docs.docker.com/toolbox/toolbox_install_windows/#looking-for-troubleshooting-help
+  Set 'MACHINE_STORAGE_PATH' environment variable to prevent docker install on system disk
   Follow the instructions, check 'Oracle VM VirtualBox' during install
 
 Usage 
@@ -30,6 +31,11 @@ O-CNN docker setup
     cd docker
     docker build -t ocnn .
     docker run --name ocnn -it ocnn /bin/bash
+    cd $OCNN_ROOT/python
+    python prepare_dataset.py --datadir $OCNN_ROOT/dataset --dataset {ModelNet10,ModelNet40}
+              --points_converter_path virtualscanner
+              --octree_converter_path octree
+              --lmdb_converter_path convert_octree_data
 
 Bash cheatsheet
 URL:  https://github.com/LeCoupa/awesome-cheatsheets.git
