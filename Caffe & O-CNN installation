@@ -1,0 +1,21 @@
+Caffe installation
+https://software.intel.com/zh-cn/articles/installation-and-configuration-of-bvlc-caffe-under-windows-the-caffe-learning-notes-part1
+https://github.com/BVLC/caffe/tree/windows
+
+  Requirements
+    vs 2015
+    Anaconda + Python 3.5 (64bit)
+    
+  Configuring and Building
+    C:\Projects> git clone https://github.com/BVLC/caffe.git
+    C:\Projects> cd caffe
+    C:\Projects\caffe> git checkout windows
+    :: Edit any of the options inside build_win.cmd to suit your needs
+    C:\Projects\caffe> scripts\build_win.cmd
+    
+  Building O-CNN
+    https://github.com/Microsoft/O-CNN
+    
+    Clone Caffe with revision 6bfc5ca8f7c2a4b7de09dfe7a01cf9d3470d22b3
+    The code for O-CNN is contained in the directory caffe. Clone and put it into the Caffe directory.
+    Follow the installation instructions of Caffe to build the code to get the executive files caffe.exe, convert_octree_data.exe and feature_pooling.exe etc.
