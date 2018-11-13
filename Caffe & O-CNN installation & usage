@@ -19,3 +19,29 @@ https://github.com/BVLC/caffe/tree/windows
     Clone Caffe with revision 6bfc5ca8f7c2a4b7de09dfe7a01cf9d3470d22b3
     The code for O-CNN is contained in the directory caffe. Clone and put it into the Caffe directory.
     Follow the installation instructions of Caffe to build the code to get the executive files caffe.exe, convert_octree_data.exe and feature_pooling.exe etc.
+
+Caffe Usage (CPU only)
+http://caffe.berkeleyvision.org/tutorial/interfaces.html
+  
+  File format
+    *.prototxt    solver
+    *.caffemodel  weights
+  
+  Training
+    # edit prototxt file: set the right directory and solver mode and other parameters
+    caffe train -solver examples/mnist/lenet_solver.prototxt
+    
+  Testing
+    caffe test -model examples/mnist/lenet_train_test.prototxt -weights examples/mnist/lenet_iter_10000.caffemodel -iterations 100
+    
+  Benchmarking
+    caffe time -model examples/mnist/lenet_train_test.prototxt -iterations 10
+    
+O-CNN usage
+  download train and test lmdb files and put them in O-CNN/caffe/examples/o-cnn 
+  cd O-CNN/caffe/examples/o-cnn
+  
+  Testing
+    caffe test -model M40_5.protxt -weights M40_5.caffemodel -iterations 100
+    
+  
