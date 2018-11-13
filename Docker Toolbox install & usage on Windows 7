@@ -37,6 +37,8 @@ O-CNN docker setup
               --octree_converter_path octree
               --lmdb_converter_path convert_octree_data
 
+It seems that containers in docker have limited space on storage, hense not suitable for O-CNN, where large amount of training data is required.
+
 Bash cheatsheet
 URL:  https://github.com/LeCoupa/awesome-cheatsheets.git
 path: awesome-cheatsheets/languages/bash.sh
