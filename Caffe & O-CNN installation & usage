@@ -41,6 +41,8 @@ O-CNN usage
   download train and test lmdb files and put them in O-CNN/caffe/examples/o-cnn 
   cd O-CNN/caffe/examples/o-cnn
   
+  Training
+    caffe train -solver solver_M40_5.prototxt
   Testing
     caffe test -model M40_5.protxt -weights M40_5.caffemodel -iterations 100
     
