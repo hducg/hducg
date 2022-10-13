@@ -136,9 +136,10 @@ void polygonFill(const vector<vector<pair<float, float>>>& polygon)
         if (edge_table[y] != nullptr)
         {
             //1. 插入新边
-            //2. 配对，填充
-            //3. 删除已到头的边
+
         }
+        //2. 配对，填充
+        //3. 删除已到头的边
         y++;
     } while (active_edge_list != nullptr);
 }
