@@ -34,7 +34,14 @@ void plot(int x, int y, unsigned char c[3] = foreground_color)
     image[idx * 3 + 1] = c[1];
     image[idx * 3 + 2] = c[2];
 }
-
+//获取像素[x,y]的颜色，保存在c数组中
+void getPixel(int x, int y, unsigned char c[3])
+{
+    int idx = y * width + x;
+    c[0] = image[idx * 3];  //r
+    c[1] = image[idx * 3 + 1];  //g
+    c[2] = image[idx * 3 + 2];  //b
+}
 void clearScreen()
 {
     for (unsigned x = 0; x < width; x++)
@@ -161,6 +168,11 @@ void drawPolygon(vector<vector<pair<float, float>>> polygon)
         }
         std::cout << endl;
     }
+}
+
+void seedFill(int x, int y, unsigned char boundary_color[], unsigned char fill_color[])
+{
+
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
