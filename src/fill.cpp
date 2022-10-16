@@ -130,47 +130,45 @@ void fillInterval(int x1, int x2, int y)
         plot(x, y);
     }
 }
+int getMinY(const vector<vector<pair<float, float>>>& polygon)
+{
 
+}
+int getMaxY(const vector<vector<pair<float, float>>>& polygon)
+{
+
+}
+void setupEdgeTable(const vector<vector<pair<float, float>>>& polygon,
+    vector<edge*>& edge_table)
+{
+
+}
 void polygonFill(const vector<vector<pair<float, float>>>& polygon)
 {
+    int y_min = getMinY(polygon);
+    int y_max = getMaxY(polygon);
     //1. 初始化边表和活性边表
-    vector<edge*> edge_table(height, nullptr);
+    vector<edge*> edge_table(y_max - y_min, nullptr);
+    setupEdgeTable(polygon, edge_table);
     edge* active_edge_list = nullptr;
-    int y = 0;
+    int y = y_min;
     //2. 遍历边表
     do
     {
-        if (edge_table[y] != nullptr)
+        if (edge_table[y - y_min] != nullptr)
         {
             //1. 插入新边
 
         }
         //2. 配对，填充
         //3. 删除已到头的边
+        //4. 更新交点坐标
         y++;
     } while (active_edge_list != nullptr);
 }
 
-void drawPolygon(vector<vector<pair<float, float>>> polygon)
-{
-    for (int i = 0; i < polygon.size(); i++)
-    {
-        for (int j = 0; j < polygon[i].size(); j++)
-        {
-            int x0 = polygon[i][j].first + 0.5;
-            int y0 = polygon[i][j].second + 0.5;
-            int x1 = polygon[i][(j + 1) % polygon[i].size()].first + 0.5;
-            int y1 = polygon[i][(j + 1) % polygon[i].size()].second + 0.5;
-            MidPointLine(x0, y0, x1, y1);
-            std::cout << "[" << x0 << "," << y0 << "]";
-            if (j < polygon[i].size() - 1)
-                std::cout << "-->";
-        }
-        std::cout << endl;
-    }
-}
-
-void seedFill(int x, int y, unsigned char boundary_color[], unsigned char fill_color[])
+void seedFill(int x, int y, unsigned char boundary_color[], 
+    unsigned char fill_color[] = foreground_color)
 {
 
 }
@@ -261,7 +259,7 @@ int main(void)
         /* Poll for and process events */
         glfwPollEvents();
     }
-    delete image;
+    delete[] image;
 
     glfwTerminate();
     return 0;
