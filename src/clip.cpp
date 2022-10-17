@@ -14,7 +14,9 @@ vector<vector<pair<float, float>>> the_window, the_polygon, clipped_polygon;
 vector<pair<float, float>> the_loop;
 
 char draw_mode = 'w';
-
+#define POLYGON 1
+#define WINDOW 0
+#define THRESHOLD 0.000001
 //设置像素[x,y]的颜色
 void plot(int x, int y, unsigned char c[3] = foreground_color)
 {
@@ -113,7 +115,6 @@ class vertex
 {
 public:
     float x, y;
-    float tp, tw;
     vertex* next[2] = {nullptr};
     bool entering = false, visited = false;
 
@@ -127,8 +128,6 @@ public:
 
     }
 };
-#define POLYGON 1
-#define WINDOW 0
 
 vertex* find_entering_vertex(const vector<vertex*>& loops)
 {
@@ -138,91 +137,138 @@ void intersect_edge_edge(vertex* v1, vertex* v2, vertex* w1, vertex* w2, vertex&
 {
 
 }
-
+float get_parameter(vertex* v1, vertex* v2, vertex* p)
+{
+    //计算p在线段v1v2上的参数值
+}
+void insert_between(vertex* v1, vertex* v2, vertex* p, int which)
+{
+    //将p插入到边v1v2上，which表示WINDOW或者POLYGON
+}
 //在这里实现多边形裁剪算法，结果保存在clipped_polygon数组
 void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vector<pair<float, float>>>& polygon, 
-    vector<vector<vector<pair<float, float>>>>& clipped_polygon)
+    vector<vector<pair<float, float>>>& clipped_polygon)
 {
-    //1. 建立循环链表
+    //存放循环链表的数组
     vector<vertex*> window_loops, polygon_loops;
+    //存放所有顶点的数组，提供顶点地址
     vector<vertex> vertices;
-    //窗口
+    //存放初始边的数组
+    vector<pair<vertex*, vertex*>> window_edges, polygon_edges;
+    //1. 建立循环链表
+    //为窗口的每个环建立循环链表
     for (int i = 0; i < window.size(); i++)
     {
-        for (int j = 0; j < window[i].size(); j++)
+        //第一个顶点指向自己
+        vertex tmpV;
+        tmpV.x = window[i][0].first;
+        tmpV.y = window[i][0].second;
+        vertices.push_back(tmpV);
+        int first_idx = vertices.size() - 1;
+        vertices[first_idx].next[WINDOW] = &vertices[first_idx];
+
+        int last_idx;
+        for (int j = 1; j < window[i].size(); j++)
         {
-            vertices.push_back(vertex(window[i][j].first, window[i][j].second));
+            vertex tmpV;
+            tmpV.x = window[i][j].first;
+            tmpV.y = window[i][j].second;
+            vertices.push_back(tmpV);
+            last_idx = vertices.size() - 1;
+            //新顶点插入到前一个顶点之后
+            vertices[last_idx - 1].insert(&vertices[last_idx], WINDOW);
+            window_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx - 1],
+                &vertices[last_idx]));
         }
-        window_loops.push_back(&vertices.back());
+        window_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx],
+            &vertices[first_idx]));
+        window_loops.push_back(&vertices[first_idx]);
     }
-    //多边形，to do
-
-    //2. 求交点，插入交点，
-    for (int i = 0; i < polygon_loops.size(); i++)
+    //为多边形的每个环建立循环链表
+    for (int i = 0; i < polygon.size(); i++)
     {
-        vertex* v1 = polygon_loops[i];
-        vertex* v2=v1->next[POLYGON];
-        while (v2 != polygon_loops[i])
+        vertex tmpV;
+        tmpV.x = polygon[i][0].first;
+        tmpV.y = polygon[i][0].second;
+        vertices.push_back(tmpV);
+        int first_idx = vertices.size() - 1;
+        vertices[first_idx].next[POLYGON] = &vertices[first_idx];
+
+        int last_idx;
+        for (int j = 1; j < polygon[i].size(); j++)
         {
-            //to do：遍历窗口的所有边w1 ,w2
-            for (int j = 0; j < window_loops.size(); j++)
+            vertex tmpV;
+            tmpV.x = polygon[i][j].first;
+            tmpV.y = polygon[i][j].second;
+            vertices.push_back(tmpV);
+            last_idx = vertices.size() - 1;
+            vertices[last_idx - 1].insert(&vertices[last_idx], POLYGON);
+            polygon_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx - 1],
+                &vertices[last_idx]));
+        }
+        polygon_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx],
+            &vertices[first_idx]));
+        polygon_loops.push_back(&vertices[first_idx]);
+    }
+    //2. 求交点，插入交点，
+    for (int i = 0; i < polygon_edges.size(); i++)
+    {
+        //遍历多边形的所有边v1 ,v2
+        vertex* v1 = polygon_edges[i].first;
+        vertex* v2 = polygon_edges[i].second;
+
+        //遍历窗口的所有边w1 ,w2
+        for (int j = 0; j < window_edges.size(); j++)
+        {
+            vertex* w1 = window_edges[j].first;
+            vertex* w2 = window_edges[j].second;
+
+            vertex p;
+            float tp, tw;
+            intersect_edge_edge(v1, v2, w1,w2, p, tp, tw);
+
+            //1. 没有交点
+            if (tp < -THRESHOLD || tp > 1 + THRESHOLD
+                || tw < -THRESHOLD || tw > 1 + THRESHOLD)
             {
-                vertex* w1 = window_loops[j];
-                vertex* w2 = v1->next[WINDOW];
-                while (w2 != window_loops[j])
-                {
-                    //to do：遍历窗口的所有边w1 ,w2
-                    vertex p;
-                    float tp, tw;
-                    intersect_edge_edge(v1, v2, w1,w2, p, tp, tw);
-                    //特殊情况
-                    //1. 交点不存在
-                    if (tp < 0 || tp>1 || tw < 0 || tw>1)
-                    {
+                //跳过
+                continue;
+            }
 
-                    }
-                    //2. 交点和顶点重合
-                    if (abs(tp) < 0.0001)   //和v1重合
-                    {
-                        if (abs(tw) < 0.0001)  //和w1重合
-                        {
-                            if (v1 != w1)
-                            {
-                                //把v1替换成w1
-                                vertex* prev = find_previous(v1, POLYGON);
-                                prev->next[POLYGON] = w1;
-                                w1->next[POLYGON] = v1->next[POLYGON];
-                            }
-                        }
-                        else if (abs(tw - 1) < 0.0001)   //和w2重合
-                        {
+            vertex* v = nullptr, * w = nullptr;
+            if (abs(tp) < THRESHOLD)   //和v1重合
+                v = v1;
+            if (abs(tp - 1) < THRESHOLD)   //和v2重合
+                v = v2;
+            if (abs(tw) < THRESHOLD)  //和w1重合
+                w = w1;
+            if (abs(tw - 1) < THRESHOLD)   //和w2重合
+                w = w2;
 
-                        }
-                        else
-                        {
-                            //把v1插入窗口链表，找到w1和w2之间一个节点w，
-                            //这个节点的w->tw<p->tw，p->tw< w->next[WINDOW]->tw                         
-                            
-                        }
-                    }
-                    else if (abs(tp - 1) < 0.0001)   //和v2重合
-                    {
-                        if (abs(tw) < 0.0001)  //和w1重合
-                        {
-
-                        }
-                        else if (abs(tw - 1) < 0.0001)   //和w2重合
-                        {
-
-                        }
-                        else
-                        {
-
-                        }
-                    }
-
-                    //3. 普通交点情况，插入交点
-                }
+            if (v != nullptr && w != nullptr)
+            {
+                //2. 交点和窗口及多边形顶点重合，把v替换成w
+                vertex* prev = find_previous(v, POLYGON);
+                prev->next[POLYGON] = w;
+                w->next[POLYGON] = v->next[POLYGON];
+                continue;
+            }
+            else if (v != nullptr)
+            {
+                //3. 交点和多边形顶点重合，把v插入窗口边
+                insert_between(w1, w2, v, WINDOW);
+            }
+            else if (w != nullptr)
+            {
+                //4. 交点和窗口顶点重合，把w插入多边形边
+                insert_between(v1, v2, w, POLYGON);
+            }
+            else
+            {
+                //5. p为普通交点，插入窗口边和多边形边
+                vertices.push_back(p);
+                insert_between(w1, w2, &vertices[vertices.size() - 1], WINDOW);
+                insert_between(v1, v2, &vertices[vertices.size() - 1], POLYGON);
             }
         }
     }
@@ -230,7 +276,6 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
     //3. 遍历链表，收集裁剪后的多边形顶点
     while(true)
     {
-        vector<vector<pair<float, float>>> clipped_polygon;
         vertex* start = find_entering_vertex(polygon_loops);
         if (start == nullptr)
             break;
