@@ -122,10 +122,11 @@ public:
     {
         v->next[which] = this->next[which];
         this->next[which] = v;
+        return v;
     }
-    vertex* find_previous(vertex* v, int which)
+    vertex* find_previous(int which)
     {
-
+        return this;
     }
 };
 
@@ -133,18 +134,20 @@ vertex* find_entering_vertex(const vector<vertex*>& loops)
 {
     return nullptr;
 }
-void intersect_edge_edge(vertex* v1, vertex* v2, vertex* w1, vertex* w2, vertex& p, float& tp, float& tw)
+void intersect_edge_edge(vertex* v1, vertex* v2, vertex* w1, vertex* w2, float& tp, float& tw)
 {
 
 }
 float get_parameter(vertex* v1, vertex* v2, vertex* p)
 {
     //计算p在线段v1v2上的参数值
+    return 0.0f;
 }
 void insert_between(vertex* v1, vertex* v2, vertex* p, int which)
 {
     //将p插入到边v1v2上，which表示WINDOW或者POLYGON
 }
+
 //在这里实现多边形裁剪算法，结果保存在clipped_polygon数组
 void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vector<pair<float, float>>>& polygon, 
     vector<vector<pair<float, float>>>& clipped_polygon)
@@ -152,7 +155,7 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
     //存放循环链表的数组
     vector<vertex*> window_loops, polygon_loops;
     //存放所有顶点的数组，提供顶点地址
-    vector<vertex> vertices;
+    vector<vertex*> vertices;
     //存放初始边的数组
     vector<pair<vertex*, vertex*>> window_edges, polygon_edges;
     //1. 建立循环链表
@@ -160,55 +163,57 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
     for (int i = 0; i < window.size(); i++)
     {
         //第一个顶点指向自己
-        vertex tmpV;
-        tmpV.x = window[i][0].first;
-        tmpV.y = window[i][0].second;
+        vertex* tmpV = new vertex;
+        tmpV->x = window[i][0].first;
+        tmpV->y = window[i][0].second;
+        tmpV->next[WINDOW] = tmpV;
         vertices.push_back(tmpV);
         int first_idx = vertices.size() - 1;
-        vertices[first_idx].next[WINDOW] = &vertices[first_idx];
-
+        
         int last_idx;
         for (int j = 1; j < window[i].size(); j++)
         {
-            vertex tmpV;
-            tmpV.x = window[i][j].first;
-            tmpV.y = window[i][j].second;
+            vertex* tmpV = new vertex;
+            tmpV->x = window[i][j].first;
+            tmpV->y = window[i][j].second;            
             vertices.push_back(tmpV);
             last_idx = vertices.size() - 1;
             //新顶点插入到前一个顶点之后
-            vertices[last_idx - 1].insert(&vertices[last_idx], WINDOW);
-            window_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx - 1],
-                &vertices[last_idx]));
+            vertices[last_idx - 1]->insert(tmpV, WINDOW);
+            window_edges.push_back(pair<vertex*, vertex*>(vertices[last_idx - 1],
+                tmpV));
         }
-        window_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx],
-            &vertices[first_idx]));
-        window_loops.push_back(&vertices[first_idx]);
+        window_edges.push_back(pair<vertex*, vertex*>(vertices[last_idx],
+            vertices[first_idx]));
+        window_loops.push_back(vertices[first_idx]);
     }
+    
     //为多边形的每个环建立循环链表
     for (int i = 0; i < polygon.size(); i++)
     {
-        vertex tmpV;
-        tmpV.x = polygon[i][0].first;
-        tmpV.y = polygon[i][0].second;
+        vertex* tmpV = new vertex;
+        tmpV->x = polygon[i][0].first;
+        tmpV->y = polygon[i][0].second;
+        tmpV->next[POLYGON] = tmpV;
         vertices.push_back(tmpV);
         int first_idx = vertices.size() - 1;
-        vertices[first_idx].next[POLYGON] = &vertices[first_idx];
-
+        
         int last_idx;
         for (int j = 1; j < polygon[i].size(); j++)
         {
-            vertex tmpV;
-            tmpV.x = polygon[i][j].first;
-            tmpV.y = polygon[i][j].second;
+            vertex* tmpV = new vertex;
+            tmpV->x = polygon[i][j].first;
+            tmpV->y = polygon[i][j].second;
+            
             vertices.push_back(tmpV);
             last_idx = vertices.size() - 1;
-            vertices[last_idx - 1].insert(&vertices[last_idx], POLYGON);
-            polygon_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx - 1],
-                &vertices[last_idx]));
+            vertices[last_idx - 1]->insert(tmpV, POLYGON);
+            polygon_edges.push_back(pair<vertex*, vertex*>(vertices[last_idx - 1],
+                vertices[last_idx]));
         }
-        polygon_edges.push_back(pair<vertex*, vertex*>(&vertices[last_idx],
-            &vertices[first_idx]));
-        polygon_loops.push_back(&vertices[first_idx]);
+        polygon_edges.push_back(pair<vertex*, vertex*>(vertices[last_idx],
+            vertices[first_idx]));
+        polygon_loops.push_back(vertices[first_idx]);
     }
     //2. 求交点，插入交点，
     for (int i = 0; i < polygon_edges.size(); i++)
@@ -223,9 +228,8 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
             vertex* w1 = window_edges[j].first;
             vertex* w2 = window_edges[j].second;
 
-            vertex p;
             float tp, tw;
-            intersect_edge_edge(v1, v2, w1,w2, p, tp, tw);
+            intersect_edge_edge(v1, v2, w1,w2, tp, tw);
 
             //1. 没有交点
             if (tp < -THRESHOLD || tp > 1 + THRESHOLD
@@ -248,7 +252,7 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
             if (v != nullptr && w != nullptr)
             {
                 //2. 交点和窗口及多边形顶点重合，把v替换成w
-                vertex* prev = find_previous(v, POLYGON);
+                vertex* prev = v->find_previous(POLYGON);
                 prev->next[POLYGON] = w;
                 w->next[POLYGON] = v->next[POLYGON];
                 continue;
@@ -266,9 +270,12 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
             else
             {
                 //5. p为普通交点，插入窗口边和多边形边
+                vertex* p = new vertex;
+                p->x = v1->x + tp * (v2->x - v1->x);
+                p->y = v1->y + tp * (v2->y - v1->y);
                 vertices.push_back(p);
-                insert_between(w1, w2, &vertices[vertices.size() - 1], WINDOW);
-                insert_between(v1, v2, &vertices[vertices.size() - 1], POLYGON);
+                insert_between(w1, w2, p, WINDOW);
+                insert_between(v1, v2, p, POLYGON);
             }
         }
     }
@@ -296,6 +303,8 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
         }
         clipped_polygon.push_back(loop);
     }
+    for (int i = 0; i < vertices.size(); i++)
+        delete vertices[i];
 }
 void drawPolygon(vector<vector<pair<float, float>>> polygon)
 {
