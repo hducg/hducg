@@ -126,26 +126,34 @@ public:
     }
     vertex* find_previous(int which)
     {
+        //TODO:找到这个顶点的前一个顶点
+        //给出你的实现
         return this;
     }
 };
 
 vertex* find_entering_vertex(const vector<vertex*>& loops)
 {
+    //TODO:找到loops中一个未被访问过的入点，如果找不到就返回空
+    //给出你的实现
     return nullptr;
 }
 void intersect_edge_edge(vertex* v1, vertex* v2, vertex* w1, vertex* w2, float& tp, float& tw)
 {
-
+    //TODO:求边v1v2和w1w2的交点
+    //交点在v1v2上的参数保存在tp中
+    //交点在w1w2上的参数保存在tw中
 }
 float get_parameter(vertex* v1, vertex* v2, vertex* p)
 {
-    //计算p在线段v1v2上的参数值
+    //TODO:计算p在线段v1v2上的参数值
     return 0.0f;
 }
 void insert_between(vertex* v1, vertex* v2, vertex* p, int which)
 {
-    //将p插入到边v1v2上，which表示WINDOW或者POLYGON
+    //TODO:将p插入到边v1v2上，which表示WINDOW或者POLYGON
+    //v1v2之间可能还有其它顶点，需要找到一个插入点v
+    //v的参数比p小，并且v的下一个顶点的参数比p大
 }
 
 //在这里实现多边形裁剪算法，结果保存在clipped_polygon数组
@@ -215,7 +223,7 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
             vertices[first_idx]));
         polygon_loops.push_back(vertices[first_idx]);
     }
-    //2. 求交点，插入交点，
+    //2. 求交点，在循环链表中插入交点
     for (int i = 0; i < polygon_edges.size(); i++)
     {
         //遍历多边形的所有边v1 ,v2
@@ -280,7 +288,10 @@ void WAClip(const vector<vector<pair<float, float>>>& window, const vector<vecto
         }
     }
 
-    //3. 遍历链表，收集裁剪后的多边形顶点
+    //3. TODO:标记入点和出点
+    //给出你的实现
+
+    //4. 遍历链表，收集裁剪后的多边形顶点
     while(true)
     {
         vertex* start = find_entering_vertex(polygon_loops);
