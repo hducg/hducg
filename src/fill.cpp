@@ -1,21 +1,40 @@
 #include <GL/glew.h>
-#include <iostream>
 #include <GLFW/glfw3.h>
-#include <ctime>
-#include <cstdlib>
+#include "glm/glm.hpp"
+#include "glm/gtx/transform.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
+
+#include <iostream>
 #include <vector>
-#include <list>
 using namespace std;
 
-int width = 800, height = 800;
-unsigned char foreground_color[3] = { 255,255,255 };
-unsigned char background_color[3] = {0,0,0};
-unsigned char* image = new unsigned char[width * height * 3];
-vector<vector<pair<float, float>>> the_polygon;
-vector<pair<float, float>> the_loop;
+typedef struct { unsigned char r, g, b; } Color;
+typedef vector<glm::vec3> Loop;
+typedef struct { vector<Loop> loops; Color color; } Polygon;
+typedef vector<Polygon> Object;
 
-//设置像素[x,y]的颜色
-void plot(int x, int y, unsigned char c[3] = foreground_color)
+int width = 800, height = 800;  //窗口宽度和高度
+Color foreground_color = { 255,255,255 };    //前景色
+Color background_color = {0,0,0};    //背景色
+unsigned char* frame_buffer = new unsigned char[width * height * 3];   //颜色缓存
+float* z_buffer = new float[width * height];    //深度缓存
+
+//1. 定义视图变换和投影变换矩阵
+glm::vec3 center = glm::vec3(7.5f, 7.5f, 5.0f);
+glm::vec3 camera = glm::vec3(22.5f, 22.5f, 20.0f);
+glm::mat4 view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
+//视角为90°，投影窗口尺寸比为1
+//近裁剪平面到视点距离为1，远裁剪平面到视点距离为视点到中心点距离+10
+glm::mat4 projection = glm::perspective(glm::pi<float>() * 0.5f, 1.0f, 1.0f,
+    glm::length(center - camera) + 10.0f);
+
+float elevation = 0.0f, azimuth = 0.0f;
+bool depth_enabled = false;
+
+Object object;
+
+//设置像素[x,y]的颜色，默认使用前景色
+void setPixel(int x, int y, Color c = foreground_color)
 {
     if (x < 0 || x >= width)
     {
@@ -30,25 +49,41 @@ void plot(int x, int y, unsigned char c[3] = foreground_color)
     }
 
     int idx = y * width + x;
-    image[idx * 3] = c[0];
-    image[idx * 3 + 1] = c[1];
-    image[idx * 3 + 2] = c[2];
+    frame_buffer[idx * 3] = c.r;
+    frame_buffer[idx * 3 + 1] = c.g;
+    frame_buffer[idx * 3 + 2] = c.b;
 }
+
 //获取像素[x,y]的颜色，保存在c数组中
-void getPixel(int x, int y, unsigned char c[3])
+Color getPixel(int x, int y)
 {
     int idx = y * width + x;
-    c[0] = image[idx * 3];  //r
-    c[1] = image[idx * 3 + 1];  //g
-    c[2] = image[idx * 3 + 2];  //b
+    return { frame_buffer[idx * 3], frame_buffer[idx * 3 + 1], frame_buffer[idx * 3 + 2] };
 }
+
+//设置像素[x,y]的深度
+void setDepth(int x, int y, float d)
+{
+    int idx = y * width + x;
+    z_buffer[idx] = d;
+}
+
+//读取像素[x,y]的深度
+float getDepth(int x, int y)
+{
+    int idx = y * width + x;
+    return z_buffer[idx];
+}
+
+//将颜色缓存设置为背景色，深度缓存设置为最大值
 void clearScreen()
 {
     for (unsigned x = 0; x < width; x++)
     {
         for (unsigned y = 0; y < height; y++)
         {
-            plot(x,y, background_color);
+            setPixel(x,y, background_color);
+            setDepth(x, y, FLT_MAX);
         }
     }
 }
@@ -61,7 +96,7 @@ void swap(int& x, int& y)
     y = z;
 }
 void MidPointLine(int x0, int y0, int x1, int y1,
-    unsigned char c[3] = foreground_color)
+    Color c = foreground_color)
 {    
     //处理斜率绝对值大于1的情况
     bool steep = abs(int(y1 - y0)) > abs(int(x1 - x0));
@@ -101,9 +136,9 @@ void MidPointLine(int x0, int y0, int x1, int y1,
             real_y = offset - y;
 
         if (steep == true)
-            plot(real_y, x, c);
+            setPixel(real_y, x, c);
         else
-            plot(x, real_y, c);
+            setPixel(x, real_y, c);
 
         if (dm <= 0)    //中点在直线上方
             dm = dm + dmp1;
@@ -123,89 +158,143 @@ struct edge
     edge* next;
 };
 
-void fillInterval(int x1, int x2, int y)
+float interpolateDepth(const Polygon& polygon, int x, int y)
+{
+    //TODO
+    return 0.0f;
+}
+void fillInterval(const Polygon& polygon, int x1, int x2, int y)
 {
     for (int x = x1; x <= x2; x++)
     {
-        plot(x, y);
+        if (depth_enabled)
+        {
+            float d = interpolateDepth(polygon, x, y);
+            if (d < getDepth(x, y))
+            {
+                setDepth(x, y, d);
+                setPixel(x, y, polygon.color);
+            }
+        }
+        else
+            setPixel(x, y, polygon.color);
     }
 }
-int getMinY(const vector<vector<pair<float, float>>>& polygon)
+void getScanRange(const Polygon& polygon, int& y_min, int & y_max)
 {
-
+    //TODO
 }
-int getMaxY(const vector<vector<pair<float, float>>>& polygon)
-{
 
-}
-void setupEdgeTable(const vector<vector<pair<float, float>>>& polygon,
-    vector<edge*>& edge_table)
+void setupEdgeTable(const Polygon& polygon, vector<edge*>& edge_table)
 {
-
+    //TODO
 }
-void polygonFill(const vector<vector<pair<float, float>>>& polygon)
+void polygonFill(const Polygon& polygon)
 {
-    int y_min = getMinY(polygon);
-    int y_max = getMaxY(polygon);
+    int y_min, y_max;
+    getScanRange(polygon, y_min, y_max);
+    
     //1. 初始化边表和活性边表
     vector<edge*> edge_table(y_max - y_min, nullptr);
     setupEdgeTable(polygon, edge_table);
     edge* active_edge_list = nullptr;
-    int y = y_min;
+    int y = y_min + 1;
     //2. 遍历边表
     do
     {
-        if (edge_table[y - y_min] != nullptr)
+        if (edge_table[y - y_min - 1] != nullptr)
         {
-            //1. 插入新边
-
+            //1.TODO:插入新边
+            
         }
-        //2. 配对，填充
-        //3. 删除已到头的边
-        //4. 更新交点坐标
+        //2.TODO:配对，填充
+        //3.TODO:删除已到头的边
+        //4.TODO:更新交点坐标
         y++;
     } while (active_edge_list != nullptr);
 }
 
-void seedFill(int x, int y, unsigned char boundary_color[], 
-    unsigned char fill_color[] = foreground_color)
+void renderObject(Object object)
 {
-
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    //按鼠标左键添加顶点
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    for (int i = 0; i < object.size(); i++)
     {
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        the_loop.push_back(pair<float, float>(xpos, height - ypos));
-        if (the_loop.size() > 1)
+        Polygon& polygon = object[i];
+        for (int j = 0; j < polygon.loops.size(); j++)
         {
-            MidPointLine(the_loop[the_loop.size() - 2].first, the_loop[the_loop.size() - 2].second,
-                the_loop[the_loop.size() - 1].first, the_loop[the_loop.size() - 1].second);
+            Loop& loop = polygon.loops[j];
+            for (int k = 0; k < loop.size(); k++)
+            {
+                //1. 对多边形顶点执行视图变换和投影变换
+                glm::vec4 pt = projection * view * glm::vec4(loop[k], 1.0f);
+                //除以齐次项，z表示深度
+                loop[k] = glm::vec3(pt) / pt.w;
+                //TODO:把[x,y]转换为像素坐标
+            }
         }
-    }
-    //按鼠标右键封闭环
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-    {
-        the_polygon.push_back(the_loop);
-        //绘制最后一条边
-        MidPointLine(the_loop[the_loop.size() - 1].first, the_loop[the_loop.size() - 1].second,
-            the_loop[0].first, the_loop[0].second);
-        the_loop.clear();   //清空数组
+        //填充多边形
+        polygonFill(polygon);
     }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    //按回车键执行扫描填充
-    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
+    bool update = false;
+    if (key == GLFW_KEY_D && action == GLFW_PRESS)
     {
-        foreground_color[0] = 255;
-        foreground_color[1] = foreground_color[2] = 0;
-        polygonFill(the_polygon);
+        depth_enabled = !depth_enabled;
+        if (depth_enabled)
+            cout << "depth test enabled" << endl;
+        else
+            cout << "depth test disabled" << endl;
+        update = true;
+    }
+
+    if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+    {
+        elevation += glm::radians(10.0f);
+        float radius = glm::length(center - camera);
+        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
+            center.y + radius * sin(elevation) * sin(azimuth),
+            center.z + radius * cos(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        update = true;
+    }
+    if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+    {
+        elevation -= glm::radians(10.0f);
+        float radius = glm::length(center - camera);
+        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
+            center.y + radius * sin(elevation) * sin(azimuth),
+            center.z + radius * cos(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        update = true;
+    }
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+    {
+        azimuth += glm::radians(10.0f);
+        float radius = glm::length(center - camera);
+        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
+            center.y + radius * sin(elevation) * sin(azimuth),
+            center.z + radius * cos(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        update = true;
+    }
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+    {
+        azimuth -= glm::radians(10.0f);
+        float radius = glm::length(center - camera);
+        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
+            center.y + radius * sin(elevation) * sin(azimuth),
+            center.z + radius * cos(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        update = true;
+    }
+    if (update)
+    {
+        //初始化颜色缓存和深度缓存
+        clearScreen();
+        //绘制物体
+        renderObject(object);
     }
 }
 
@@ -228,7 +317,6 @@ int main(void)
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
     
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetKeyCallback(window, key_callback);
 
     GLenum err = glewInit();
@@ -238,20 +326,50 @@ int main(void)
         std::cout << "Error: \n", glewGetErrorString(err);
     }
     std::cout << "------------------Help------------------" << endl;
-    std::cout << "Press key 'Enter': fill polygon" << endl;
-    std::cout << "Press mouse left button: add vertex" << endl;
-    std::cout << "Press mouse right button: close loop" << endl;
+    std::cout << "Press key 'D': enable/disable depth test" << endl;
+    std::cout << "Press arrow key: change camera position" << endl;
+    
+    //2. 定义物体
+    //底面8个点
+    glm::vec3 pts[8] = { 
+        glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 15.0f, 0.0f), 
+        glm::vec3(5.0f, 15.0f, 0.0f), glm::vec3(5.0f, 10.0f, 0.0f), 
+        glm::vec3(10.0f, 10.0f, 0.0f), glm::vec3(10.0f, 5.0f, 0.0f),
+        glm::vec3(15.0f, 5.0f, 0.0f), glm::vec3(15.0f, 0.0f, 0.0f) };
+    glm::vec3 h(0.0f, 0.0f, 10.0f); //高度向量
+    
+    Loop loops[10];
+    for (int i = 0; i < 8; i++) //遍历8个底面顶点
+    {
+        loops[0].push_back(pts[i]); //底面
+        loops[1].push_back(pts[7 - i] + h); //顶面
+        //侧面
+        loops[i + 2].push_back(pts[i]);
+        loops[i + 2].push_back(pts[i] + h);
+        loops[i + 2].push_back(pts[(i + 1) % 8] + h);
+        loops[i + 2].push_back(pts[(i + 1) % 8]);
+    }
+    //TODO:定义10个面的颜色
+    Color colors[10];
+    for (int i = 0; i < 10; i++)
+    {
+        vector<Loop> ply_loops{loops[i]};
+        Polygon polygon{ ply_loops, colors[i] };
+        object.push_back(polygon);
+    }        
 
-    //画背景
+    //3. 渲染
+    //初始化颜色缓存和深度缓存
     clearScreen();
-        
+    //绘制物体
+    renderObject(object);
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
         
-        glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+        glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, frame_buffer);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -259,7 +377,8 @@ int main(void)
         /* Poll for and process events */
         glfwPollEvents();
     }
-    delete[] image;
+    delete[] frame_buffer;
+    delete[] z_buffer;
 
     glfwTerminate();
     return 0;
