@@ -3,6 +3,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtx/transform.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#include "../util.h"
 
 #include <iostream>
 #include <vector>
@@ -160,7 +161,9 @@ struct edge
 
 float interpolateDepth(const Polygon& polygon, int x, int y)
 {
-    //TODO
+    //TODO:用多边形顶点深度值插值计算内部点深度值
+    //参考资料：
+    //https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/visibility-problem-depth-buffer-depth-interpolation
     return 0.0f;
 }
 void fillInterval(const Polygon& polygon, int x1, int x2, int y)
@@ -182,12 +185,12 @@ void fillInterval(const Polygon& polygon, int x1, int x2, int y)
 }
 void getScanRange(const Polygon& polygon, int& y_min, int & y_max)
 {
-    //TODO
+    //TODO：计算多边形的y坐标范围，保存到y_min和y_max参数中
 }
 
 void setupEdgeTable(const Polygon& polygon, vector<edge*>& edge_table)
 {
-    //TODO
+    //TODO:初始化边表
 }
 void polygonFill(const Polygon& polygon)
 {
@@ -213,22 +216,33 @@ void polygonFill(const Polygon& polygon)
         y++;
     } while (active_edge_list != nullptr);
 }
+bool isBackFace(const Polygon& polygon)
+{
+    //TODO:判断面是否为背面
+    return false;
+}
 
 void renderObject(Object object)
 {
+    cout << "view matrix" << endl << view << endl;
+    cout << "projection matrix" << endl << projection << endl;
+
     for (int i = 0; i < object.size(); i++)
     {
         Polygon& polygon = object[i];
+        if (isBackFace(polygon))
+            continue;
         for (int j = 0; j < polygon.loops.size(); j++)
         {
             Loop& loop = polygon.loops[j];
             for (int k = 0; k < loop.size(); k++)
             {
-                //1. 对多边形顶点执行视图变换和投影变换
+                //参考资料：https://www.songho.ca/opengl/gl_transform.html
+                //视图变换和投影变换，obj-->clip
                 glm::vec4 pt = projection * view * glm::vec4(loop[k], 1.0f);
-                //除以齐次项，z表示深度
+                //除以齐次项，clip-->NDC
                 loop[k] = glm::vec3(pt) / pt.w;
-                //TODO:把[x,y]转换为像素坐标
+                //TODO:把NDC坐标转换为屏幕坐标，ndc-->[xw,yw,zw]
             }
         }
         //填充多边形
