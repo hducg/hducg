@@ -3,16 +3,16 @@
 #include "glm/glm.hpp"
 #include "glm/gtx/transform.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
-#include "../util.h"
+#include "../util.h"    //"../"表示util.h位于本文件的上级目录
 
 #include <iostream>
 #include <vector>
 using namespace std;
 
-typedef struct { unsigned char r, g, b; } Color;
-typedef vector<glm::vec3> Loop;
-typedef struct { vector<Loop> loops; Color color; } Polygon;
-typedef vector<Polygon> Object;
+typedef struct { unsigned char r, g, b; } Color;    //颜色 
+typedef vector<glm::vec3> Loop;     //顶点环
+typedef struct { vector<Loop> loops; Color color; } Polygon;    //一个多边形由多个环构成
+typedef vector<Polygon> Object; //物体定义为多边形的集合
 
 int width = 800, height = 800;  //窗口宽度和高度
 Color foreground_color = { 255,255,255 };    //前景色
@@ -22,17 +22,23 @@ float* z_buffer = new float[width * height];    //深度缓存
 
 //1. 定义视图变换和投影变换矩阵
 glm::vec3 center = glm::vec3(7.5f, 7.5f, 5.0f);
-glm::vec3 camera = glm::vec3(22.5f, 22.5f, 20.0f);
+//相机到物体中心的距离
+float radius = 20.0f;
+//相机的仰角和方位角，控制相机在以center为球心、半径为radius的球面上移动
+float elevation = 0.0f, azimuth = 0.0f;
+//相机初始位置
+glm::vec3 camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+    center.y + radius * cos(elevation) * sin(azimuth),
+    center.z + radius * sin(elevation));
 glm::mat4 view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
 //视角为90°，投影窗口尺寸比为1
 //近裁剪平面到视点距离为1，远裁剪平面到视点距离为视点到中心点距离+10
 glm::mat4 projection = glm::perspective(glm::pi<float>() * 0.5f, 1.0f, 1.0f,
     glm::length(center - camera) + 10.0f);
 
-float elevation = 0.0f, azimuth = 0.0f;
 bool depth_enabled = false;
 
-Object object;
+Object object;  //物体定义为全局变量
 
 //设置像素[x,y]的颜色，默认使用前景色
 void setPixel(int x, int y, Color c = foreground_color)
@@ -265,42 +271,38 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     if (key == GLFW_KEY_UP && action == GLFW_PRESS)
     {
-        elevation += glm::radians(10.0f);
-        float radius = glm::length(center - camera);
-        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-            center.y + radius * sin(elevation) * sin(azimuth),
-            center.z + radius * cos(elevation));
-        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        elevation -= glm::radians(10.0f);
+        camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+            center.y + radius * cos(elevation) * sin(azimuth),
+            center.z + radius * sin(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
         update = true;
     }
     if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
     {
-        elevation -= glm::radians(10.0f);
-        float radius = glm::length(center - camera);
-        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-            center.y + radius * sin(elevation) * sin(azimuth),
-            center.z + radius * cos(elevation));
-        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        elevation += glm::radians(10.0f);
+        camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+            center.y + radius * cos(elevation) * sin(azimuth),
+            center.z + radius * sin(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
         update = true;
     }
     if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
     {
-        azimuth += glm::radians(10.0f);
-        float radius = glm::length(center - camera);
-        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-            center.y + radius * sin(elevation) * sin(azimuth),
-            center.z + radius * cos(elevation));
-        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        azimuth -= glm::radians(10.0f);
+        camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+            center.y + radius * cos(elevation) * sin(azimuth),
+            center.z + radius * sin(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
         update = true;
     }
     if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
     {
-        azimuth -= glm::radians(10.0f);
-        float radius = glm::length(center - camera);
-        camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-            center.y + radius * sin(elevation) * sin(azimuth),
-            center.z + radius * cos(elevation));
-        view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+        azimuth += glm::radians(10.0f);
+        camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+            center.y + radius * cos(elevation) * sin(azimuth),
+            center.z + radius * sin(elevation));
+        view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
         update = true;
     }
     if (update)

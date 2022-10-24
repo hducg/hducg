@@ -10,16 +10,26 @@
 #include <random>
 using namespace std;
 
-glm::vec3 center = glm::vec3(0.0f, 0.0f, -10.0f);
-glm::vec3 camera = glm::vec3(0.0f, 0.0f, 0.0f);
-
-glm::mat4 model = glm::mat4(1.0f);
-glm::mat4 view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
-glm::mat4 projection = glm::perspective(glm::pi<float>() * 0.5f, 1.0f, 1.0f, 
-	glm::length(center - camera) * (1 + 1 / sqrt(2.0f)));
-
+//物体中心点坐标
+glm::vec3 center = glm::vec3(7.5f, 7.5f, 5.0f);
+//相机到物体中心的距离
+float radius = 20.0f;
+//相机的仰角和方位角，控制相机在以center为球心、半径为radius的球面上移动
 float elevation = 0.0f, azimuth = 0.0f;
+//相机初始位置
+glm::vec3 camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+	center.y + radius * cos(elevation) * sin(azimuth),
+	center.z + radius * sin(elevation));
+
+//视图变换矩阵
+glm::mat4 view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
+//投影矩阵
+glm::mat4 projection = glm::perspective(glm::pi<float>() * 0.5f, 1.0f, 1.0f, 
+	glm::length(center - camera) + 10.0f);
+
+//顶点着色器中变换矩阵变量的ID
 unsigned int MatrixID;
+//是否启用深度测试
 bool depth_enabled = false;
 
 ostream& operator<<(ostream &output, const glm::mat4 &m)
@@ -54,63 +64,60 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			cout << "depth test disabled" << endl;
 	}
 
-	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-	{
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-		update = true;
-	}
-	if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-	{
-		model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-		update = true;
-	}
 	if (key == GLFW_KEY_UP && action == GLFW_PRESS)
 	{
-		elevation += glm::radians(10.0f);
-		float radius = glm::length(center - camera);
-		camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-			center.y + radius * sin(elevation) * sin(azimuth),
-			center.z + radius * cos(elevation));
-		view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+		elevation -= glm::radians(10.0f);
+		camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+			center.y + radius * cos(elevation) * sin(azimuth),
+			center.z + radius * sin(elevation));
+		view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
 		update = true;
 	}
 	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
 	{
-		elevation -= glm::radians(10.0f);
-		float radius = glm::length(center - camera);
-		camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-			center.y + radius * sin(elevation) * sin(azimuth),
-			center.z + radius * cos(elevation));
-		view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+		elevation += glm::radians(10.0f);
+		camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+			center.y + radius * cos(elevation) * sin(azimuth),
+			center.z + radius * sin(elevation));
+		view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
 		update = true;
 	}
 	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
 	{
-		azimuth += glm::radians(10.0f);
-		float radius = glm::length(center - camera);
-		camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-			center.y + radius * sin(elevation) * sin(azimuth),
-			center.z + radius * cos(elevation));
-		view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+		azimuth -= glm::radians(10.0f);
+		camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+			center.y + radius * cos(elevation) * sin(azimuth),
+			center.z + radius * sin(elevation));
+		view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
 		update = true;
 	}
 	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
 	{
-		azimuth -= glm::radians(10.0f);
-		float radius = glm::length(center - camera);
-		camera = glm::vec3(center.x + radius * sin(elevation) * cos(azimuth),
-			center.y + radius * sin(elevation) * sin(azimuth),
-			center.z + radius * cos(elevation));
-		view = glm::lookAt(camera, center, glm::vec3(0.0f, 1.0f, 0.0f));
+		azimuth += glm::radians(10.0f);
+		camera = glm::vec3(center.x + radius * cos(elevation) * cos(azimuth),
+			center.y + radius * cos(elevation) * sin(azimuth),
+			center.z + radius * sin(elevation));
+		view = glm::lookAt(camera, center, glm::vec3(0.0f, 0.0f, 1.0f));
 		update = true;
 	}
 	if (update)
 	{
-		glm::mat4 mvp = projection * view * model;
+		glm::mat4 mvp = projection * view;
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 	}
 }
-
+void push_vertex(float* positions, int i, glm::vec3 pt)
+{//设置第i个点的坐标
+	positions[i * 6] = pt.x;
+	positions[i * 6 + 1] = pt.y;
+	positions[i * 6 + 2] = pt.z;
+}
+void push_color(float* positions, int i, glm::vec3 color)
+{//设置第i个点的颜色
+	positions[i * 6 + 3] = color.x;
+	positions[i * 6 + 4] = color.y;
+	positions[i * 6 + 5] = color.z;
+}
 int main(void)
 {
     GLFWwindow* window;
@@ -147,40 +154,40 @@ int main(void)
 	unsigned int shader = CreateShader(vertexShader, fragmentShader);
 	glUseProgram(shader);
 	
-	//2. 定义顶点坐标
-	const int num = 20;	//三角形数量
-	float* positions = new float[num * 18];
-	std::random_device rd;
-	std::default_random_engine eng(rd());
-	std::uniform_real_distribution<float> 
-		radius_sample(0.5f, glm::length(center - camera) / sqrt(2.0f)),
-		theta_sample(0.0f, glm::pi<float>()),
-		phi_sample(0.0f, 2 * glm::pi<float>()),
-		color_sample;
-	
-	int idx = 0;
-	for (int i = 0; i < num; i++)
-	{
-		//在半径为r球心为center的球面上随机取三个点构造一个三角形
-		float radius = radius_sample(eng);
-		float r = color_sample(eng);
-		float g = color_sample(eng);
-		float b = color_sample(eng);
-		
-		for (int j = 0; j < 3; j++)
-		{
-			float theta = theta_sample(eng);
-			float phi = phi_sample(eng);
-			
-			positions[idx++] = center.x + radius * sin(theta) * cos(phi);
-			positions[idx++] = center.y + radius * sin(theta) * sin(phi);
-			positions[idx++] = center.z + radius * cos(theta);
-			positions[idx++] = r;
-			positions[idx++] = g;
-			positions[idx++] = b;
-		}
-	}
+	//2. 定义物体
+	//底面8个点
+	glm::vec3 pts[8] = {
+		glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 15.0f, 0.0f),
+		glm::vec3(5.0f, 15.0f, 0.0f), glm::vec3(5.0f, 10.0f, 0.0f),
+		glm::vec3(10.0f, 10.0f, 0.0f), glm::vec3(10.0f, 5.0f, 0.0f),
+		glm::vec3(15.0f, 5.0f, 0.0f), glm::vec3(15.0f, 0.0f, 0.0f) };
+	glm::vec3 h(0.0f, 0.0f, 10.0f); //高度向量
 
+	int num = 8 + 8 + 2 * 9;	//上下底面各8个点，侧面9条边各2个点
+	float* positions = new float[num * 6];
+
+	for (int i = 0; i < 8; i++) //遍历8个底面顶点
+	{
+		//底面
+		push_vertex(positions, i, pts[i]);
+		push_color(positions, i, glm::vec3(0.8f, 0.0f, 0.0f));
+
+		//顶面
+		push_vertex(positions, 8 + i, pts[i] + h);
+		push_color(positions, 8 + i, glm::vec3(0.8f, 0.0f, 0.0f));
+		
+		//侧边
+		push_vertex(positions, 16 + i * 2, pts[i]);
+		push_color(positions, 16 + i * 2, glm::vec3(0.0f, 0.1f * i, 0.8f));
+
+		push_vertex(positions, 17 + i * 2, pts[i] + h);
+		push_color(positions, 17 + i * 2, glm::vec3(0.0f, 0.1f * i, 0.8f));
+	}
+	push_vertex(positions, 32, pts[0]);
+	push_color(positions, 32, glm::vec3(0.0f, 0.0f, 0.8f));
+	
+	push_vertex(positions, 33, pts[0] + h);
+	push_color(positions, 33, glm::vec3(0.0f, 0.0f, 0.8f));
     //3. 为顶点申请GPU缓存
     unsigned int VBO;
     glGenBuffers(1, &VBO);
@@ -188,7 +195,7 @@ int main(void)
     //选择缓存
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     //向缓存写入数据
-    glBufferData(GL_ARRAY_BUFFER, num * 18 * sizeof(float), 
+    glBufferData(GL_ARRAY_BUFFER, num * 6 * sizeof(float), 
 		positions, GL_STATIC_DRAW);
 	
 	//顶点属性0：坐标
@@ -203,7 +210,7 @@ int main(void)
 	
 	//4. 变换矩阵	
 	MatrixID = glGetUniformLocation(shader, "MVP");
-	glm::mat4 mvp = projection * view * model;
+	glm::mat4 mvp = projection * view;
 	glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 	std::cout << "view matrix = " << endl << view << endl;
 	std::cout << "projection matrix = " << endl << projection << endl;
@@ -219,7 +226,10 @@ int main(void)
 			glDisable(GL_DEPTH_TEST);
 
         /* Render here */  	
-		glDrawArrays(GL_TRIANGLES, 0, num * 3);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 8);	//用三角形扇绘制底面和顶面
+		glDrawArrays(GL_TRIANGLE_FAN, 8, 8);	
+		glDrawArrays(GL_QUAD_STRIP, 16, 18);	//用四边形条带绘制侧面
+
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
